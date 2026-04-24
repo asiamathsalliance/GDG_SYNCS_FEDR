@@ -16,17 +16,17 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Menu</div>
-      <a href="index" class="nav-item">
+      <a href="index.html" class="nav-item">
         <span class="nav-icon">🏠</span> Dashboard
       </a>
-      <a href="tasks" class="nav-item">
+      <a href="tasks.html" class="nav-item">
         <span class="nav-icon">✅</span> Tasks
         <span class="nav-badge" id="sidebar-task-count">0</span>
       </a>
-      <a href="archive" class="nav-item">
+      <a href="archive.html" class="nav-item">
         <span class="nav-icon">📦</span> Archive
       </a>
-      <a href="settings" class="nav-item active">
+      <a href="settings.html" class="nav-item active">
         <span class="nav-icon">⚙️</span> Settings
       </a>
     </div>
@@ -44,6 +44,11 @@
   <div class="content">
     <header class="topbar">
       <h1 class="topbar-title">Settings</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btn-logout" type="button">Logout</button>
+        <button class="btn btn-ghost" id="btn-role-chip" type="button">Member</button>
+        <a href="tasks.html" class="btn btn-primary">+ New Task</a>
+      </div>
     </header>
 
     <main class="page-body" id="settings-root">
@@ -63,15 +68,15 @@
               <div class="settings-card-body" style="display:flex;flex-direction:column;gap:1rem;">
                 <div class="form-group" style="margin:0;">
                   <label class="form-label">Display Name</label>
-                  <input type="text" class="form-control" value="Jamie Doe" />
+                  <input type="text" class="form-control" id="profile-name" />
                 </div>
                 <div class="form-group" style="margin:0;">
                   <label class="form-label">Email</label>
-                  <input type="text" class="form-control" value="jamie@taskflow.dev" />
+                  <input type="text" class="form-control" id="profile-email" />
                 </div>
                 <div class="form-group" style="margin:0;">
                   <label class="form-label">Role</label>
-                  <input type="text" class="form-control" value="Developer" />
+                  <input type="text" class="form-control" id="profile-role" readonly />
                 </div>
                 <div><button class="btn btn-primary" id="btn-save-profile">Save Changes</button></div>
               </div>
@@ -144,6 +149,38 @@
 <script src="js/app.js"></script>
 <script src="js/ui.js"></script>
 <script>
+  const user = applyUserChrome();
+  if (user) {
+    const nameInput = document.getElementById('profile-name');
+    const emailInput = document.getElementById('profile-email');
+    const roleInput = document.getElementById('profile-role');
+    if (nameInput) nameInput.value = user.name || '';
+    if (emailInput) emailInput.value = user.email || '';
+    if (roleInput) roleInput.value = roleLabel(user.role);
+  }
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    localStorage.removeItem('tf_user');
+    window.location.href = 'index.html';
+  });
+  document.getElementById('btn-save-profile')?.addEventListener('click', () => {
+    const current = getSessionUser();
+    if (!current) return;
+    const name = document.getElementById('profile-name').value.trim();
+    const email = document.getElementById('profile-email').value.trim().toLowerCase();
+    if (!name || !email) return showToast('Please enter name and email.');
+
+    const accounts = JSON.parse(localStorage.getItem('tf_accounts') || '[]');
+    const idx = accounts.findIndex(a => a.email === current.email);
+    if (idx >= 0) {
+      accounts[idx].name = name;
+      accounts[idx].email = email;
+      localStorage.setItem('tf_accounts', JSON.stringify(accounts));
+    }
+    const updated = { ...current, name, email };
+    localStorage.setItem('tf_user', JSON.stringify(updated));
+    applyUserChrome();
+    showToast('✅ Profile saved!');
+  });
   const count = loadTasks().filter(t => !t.archived && !t.done).length;
   const badge = document.getElementById('sidebar-task-count');
   if (badge) badge.textContent = count;

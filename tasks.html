@@ -16,17 +16,17 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Menu</div>
-      <a href="index" class="nav-item">
+      <a href="index.html" class="nav-item">
         <span class="nav-icon">🏠</span> Dashboard
       </a>
-      <a href="tasks" class="nav-item active">
+      <a href="tasks.html" class="nav-item active">
         <span class="nav-icon">✅</span> Tasks
         <span class="nav-badge" id="sidebar-task-count">0</span>
       </a>
-      <a href="archive" class="nav-item">
+      <a href="archive.html" class="nav-item">
         <span class="nav-icon">📦</span> Archive
       </a>
-      <a href="settings" class="nav-item">
+      <a href="settings.html" class="nav-item">
         <span class="nav-icon">⚙️</span> Settings
       </a>
     </div>
@@ -45,6 +45,8 @@
     <header class="topbar">
       <h1 class="topbar-title">Task Board</h1>
       <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btn-logout" type="button">Logout</button>
+        <button class="btn btn-ghost" id="btn-role-chip" type="button">Member</button>
         <button class="btn btn-primary" id="btn-new-task">+ New Task</button>
       </div>
     </header>
@@ -113,6 +115,20 @@
     <label class="form-label">Due Date</label>
     <input type="date" id="f-date" class="form-control" />
   </div>
+  <div class="form-group" id="f-assign-wrap" style="display:none;">
+    <label class="form-label">Assign To <span class="req">*</span></label>
+    <div style="display:flex;gap:1rem;margin-bottom:.6rem;">
+      <label style="font-size:.82rem;color:var(--text-muted);display:flex;align-items:center;gap:.35rem;">
+        <input type="radio" name="f-assign-mode" value="all" checked />
+        All students
+      </label>
+      <label style="font-size:.82rem;color:var(--text-muted);display:flex;align-items:center;gap:.35rem;">
+        <input type="radio" name="f-assign-mode" value="selected" />
+        Select students
+      </label>
+    </div>
+    <div id="f-student-list" style="display:none;max-height:140px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:.5rem;background:var(--bg-elev);"></div>
+  </div>
   <div class="modal-footer">
     <button class="btn btn-ghost" id="modal-cancel-2">Cancel</button>
     <button class="btn btn-primary" id="save-task">Add Task</button>
@@ -123,6 +139,11 @@
 <script src="js/app.js"></script>
 <script src="js/ui.js"></script>
 <script>
+  const user = applyUserChrome();
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    localStorage.removeItem('tf_user');
+    window.location.href = 'index.html';
+  });
   const count = loadTasks().filter(t => !t.archived && !t.done).length;
   const badge = document.getElementById('sidebar-task-count');
   if (badge) badge.textContent = count;

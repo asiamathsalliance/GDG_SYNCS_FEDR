@@ -9,9 +9,13 @@
   let tasks = loadTasks();
   let filter = 'all';
   let searchQ = '';
+  const sessionUser = JSON.parse(localStorage.getItem('tf_user') || 'null');
+
+  initAssignControls();
 
   
   document.getElementById('btn-new-task')?.addEventListener('click', () => {
+    refreshStudentOptions();
     openModal('task-modal', 'task-overlay');
   });
 
@@ -25,6 +29,7 @@
   });
 
   
+  document.getElementById('save-task')?.addEventListener('click', handleAddTask);
   document.getElementById('save-tasks')?.addEventListener('click', handleAddTask);
 
   function resetForm() {
@@ -32,6 +37,50 @@
     document.getElementById('f-desc').value     = '';
     document.getElementById('f-priority').value = '';
     document.getElementById('f-date').value     = '';
+    document.querySelector('input[name="f-assign-mode"][value="all"]')?.click();
+    document.querySelectorAll('#f-student-list input[type="checkbox"]').forEach(cb => {
+      cb.checked = false;
+    });
+  }
+
+  function initAssignControls() {
+    const wrap = document.getElementById('f-assign-wrap');
+    if (!wrap) return;
+    const isTeacher = sessionUser && sessionUser.role === 'educator';
+    wrap.style.display = isTeacher ? '' : 'none';
+    if (!isTeacher) return;
+
+    refreshStudentOptions();
+    document.querySelectorAll('input[name="f-assign-mode"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const list = document.getElementById('f-student-list');
+        if (!list) return;
+        list.style.display = radio.value === 'selected' && radio.checked ? '' : 'none';
+      });
+    });
+  }
+
+  function getStudentsFromDB() {
+    const accounts = JSON.parse(localStorage.getItem('tf_accounts') || '[]');
+    return accounts.filter(a => a.role === 'student');
+  }
+
+  function refreshStudentOptions() {
+    const list = document.getElementById('f-student-list');
+    if (!list) return;
+    const students = getStudentsFromDB();
+    list.innerHTML = students.map(s => `
+      <label style="display:flex;align-items:center;gap:.45rem;padding:.3rem .2rem;color:var(--text);font-size:.85rem;">
+        <input type="checkbox" value="${escapeHTML(s.email)}" />
+        <span>${escapeHTML(s.name)} <span style="color:var(--text-muted);font-size:.75rem;">(${escapeHTML(s.email)})</span></span>
+      </label>
+    `).join('');
+  }
+
+  function getSelectedStudentEmails() {
+    const mode = document.querySelector('input[name="f-assign-mode"]:checked')?.value || 'all';
+    if (mode === 'all') return getStudentsFromDB().map(s => s.email);
+    return [...document.querySelectorAll('#f-student-list input[type="checkbox"]:checked')].map(cb => cb.value);
   }
 
   function handleAddTask() {
@@ -45,13 +94,58 @@
       showToast('⚠️ Please enter a task title.');
       return;
     }
+    if (!priority) {
+      showToast('⚠️ Please select a priority.');
+      return;
+    }
+    if (!dueDate) {
+      showToast('⚠️ Due date is required.');
+      return;
+    }
 
-    tasks.push(createTask(title, desc, priority, dueDate));
+    const selectedStudentEmails = sessionUser && sessionUser.role === 'educator' ? getSelectedStudentEmails() : [];
+    if (sessionUser && sessionUser.role === 'educator' && !selectedStudentEmails.length) {
+      showToast('⚠️ Please select at least one student.');
+      return;
+    }
+
+    const task = createTask(title, desc, priority, dueDate);
+    tasks.push(task);
     saveTasks(tasks);
+    syncTeacherTaskToStudentAssignments(task, selectedStudentEmails);
     closeModal('task-modal', 'task-overlay');
     resetForm();
     renderBoard();
     showToast('✅ Task added!');
+  }
+
+  function syncTeacherTaskToStudentAssignments(task, selectedEmails = []) {
+    const user = sessionUser || JSON.parse(localStorage.getItem('tf_user') || 'null');
+    if (!user || user.role !== 'educator') return;
+
+    const accounts = JSON.parse(localStorage.getItem('tf_accounts') || '[]');
+    const students = accounts.filter(a => a.role === 'student' && (selectedEmails.length === 0 || selectedEmails.includes(a.email)));
+    if (!students.length) return;
+
+    const assignments = JSON.parse(localStorage.getItem('tf_assignments') || '[]');
+    const now = new Date().toISOString();
+    students.forEach(student => {
+      assignments.push({
+        id: task.id + '-' + student.email,
+        taskId: String(task.id),
+        title: task.title,
+        desc: task.desc,
+        student: student.name,
+        assignedTo: student.name,
+        assignedToEmail: student.email,
+        assignedToEmails: [student.email],
+        priority: task.priority || 'medium',
+        dueDate: task.dueDate,
+        createdAt: now,
+        createdBy: user.email
+      });
+    });
+    localStorage.setItem('tf_assignments', JSON.stringify(assignments));
   }
 
   
@@ -80,7 +174,7 @@
     
     const visible = activeTasks.filter(t => {
       const match = t.title.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q);
-      if (filter === 'done')    return match && t.done = true;
+      if (filter === 'done')    return match && t.done === true;
       if (filter === 'pending') return match && !t.done;
       return match;
     });
@@ -158,7 +252,7 @@
 
     } else if (action === 'delete') {
       
-      tasks = tasks.filter(t => t.id === id);
+      tasks = tasks.filter(t => t.id !== id);
       saveTasks(tasks);
       renderBoard();
       showToast('🗑 Task deleted.');
@@ -179,7 +273,7 @@
     const tasks = loadTasks().filter(t => !t.archived);
     const total   = tasks.length;
     
-    const done    = tasks.filter(t => !t.done).length;
+    const done    = tasks.filter(t => t.done).length;
     const pending = tasks.filter(t => !t.done).length;
     const pct = total === 0 ? 0 : Math.round((tasks.filter(t => t.done).length / total) * 100);
 
@@ -289,7 +383,7 @@
       const target = item.dataset.tab;
       document.querySelectorAll('.settings-panel').forEach(p => {
         
-        p.style.display = p.dataset.panel = target ? 'flex' : 'none';
+        p.style.display = p.dataset.panel === target ? 'flex' : 'none';
       });
     });
   });
@@ -303,7 +397,5 @@
   });
 
   
-  document.getElementById('btn-save-profile')?.addEventListener('click', () => {
-    showToast('✅ Profile saved!');
-  });
+  // Profile save behavior is handled in page-level scripts.
 })();

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TaskFlow – Student Dashboard</title>
-  <link rel="stylesheet" href="css/style" />
-  <link rel="stylesheet" href="css/pages" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/pages.css" />
   <style>
     .role-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.25);border-radius:20px;font-size:.72rem;font-weight:600;padding:.2rem .7rem;letter-spacing:.04em;text-transform:uppercase}
     .badge{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600}
@@ -114,7 +114,7 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Student Menu</div>
-      <a href="student-dashboard" class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="student-dashboard.html" class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
       <a href="#" class="nav-item" onclick="showTab('assigned');return false;"><span class="nav-icon">📋</span> Assigned Tasks<span class="nav-badge" id="sidebar-task-count">0</span></a>
       <a href="#" class="nav-item" onclick="showTab('schedule');return false;"><span class="nav-icon">📅</span> My Schedule</a>
       <a href="#" class="nav-item" onclick="showTab('own');return false;"><span class="nav-icon">✅</span> My Tasks</a>
@@ -136,8 +136,9 @@
       <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
       <h1 class="topbar-title">Student Dashboard</h1>
       <div class="topbar-actions topbar-meta">
-        <span class="role-badge">🎓 Student</span>
-        <button class="signout-btn" type="button">Sign out</button>
+        <button class="signout-btn" id="btn-signout" type="button">Sign out</button>
+        <button class="btn btn-ghost btn-sm" id="btn-role-chip" type="button">Student</button>
+        <a href="tasks.html" class="btn btn-primary btn-sm">+ New Task</a>
       </div>
     </header>
 
@@ -258,10 +259,14 @@
 <div class="modal" id="submit-modal">
   <div class="modal-title">Submit Task</div>
   <p style="color:#888;font-size:.85rem;margin-bottom:1.25rem;" id="submit-task-name"></p>
+  <div style="margin-bottom:1rem;">
+    <label class="form-label">Task Description</label>
+    <div id="submit-task-desc" style="font-size:.84rem;color:#bbb;line-height:1.5;background:#13151e;border:1px solid #2a2d3a;border-radius:8px;padding:.7rem .8rem;min-height:2.4rem;">No description provided.</div>
+  </div>
   <div class="form-group"><label class="form-label">Note (optional)</label><textarea id="submit-note" class="form-control" placeholder="Any comments for your teacher…"></textarea></div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeSubmitModal()">Cancel</button>
-    <button class="btn btn-primary-green" onclick="confirmSubmit()">Submit ✓</button>
+    <button class="btn btn-primary-green" onclick="confirmSubmit()">Submit</button>
   </div>
 </div>
 
@@ -294,27 +299,42 @@
 
 <script>
   const user = JSON.parse(localStorage.getItem('tf_user')||'null');
-  if (!user || user.role !== 'student') window.location.href = 'login.html';
+  if (!user || user.role !== 'student') window.location.href = 'index.html';
 
   const STUDENT_NAME = user?.name || '';
+  const STUDENT_EMAIL = (user?.email || '').toLowerCase();
+  const STUDENT_KEY = STUDENT_EMAIL || STUDENT_NAME;
 
-  function signOut(){ localStorage.removeItem('tf_user'); window.location.href='login.html'; }
+  function signOut(){ localStorage.removeItem('tf_user'); window.location.href='index.html'; }
 
   document.getElementById('sidebar-name').textContent = STUDENT_NAME;
   document.getElementById('sidebar-avatar').textContent = STUDENT_NAME.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 
   function getAccounts()    { return JSON.parse(localStorage.getItem('tf_accounts')||'[]'); }
   function saveAccounts(a)  { localStorage.setItem('tf_accounts',JSON.stringify(a)); }
-  function getAssignments() { return JSON.parse(localStorage.getItem('tf_assignment')||'[]'); }
+  function getAssignments() {
+    const primary = JSON.parse(localStorage.getItem('tf_assignments') || 'null');
+    if (Array.isArray(primary)) return primary;
+    const legacy = JSON.parse(localStorage.getItem('tf_assignment') || '[]');
+    return Array.isArray(legacy) ? legacy : [];
+  }
 
   
-  function getSubmissions() { return JSON.parse(localStorage.getItem('tf_submisions')||'[]'); }
-  function saveSubmissions(a){ localStorage.setItem('tf_submisions',JSON.stringify(a)); }
+  function getSubmissions() {
+    const primary = JSON.parse(localStorage.getItem('tf_submissions') || 'null');
+    if (Array.isArray(primary)) return primary;
+    const legacy = JSON.parse(localStorage.getItem('tf_submisions') || '[]');
+    return Array.isArray(legacy) ? legacy : [];
+  }
+  function saveSubmissions(a){
+    localStorage.setItem('tf_submissions', JSON.stringify(a));
+    localStorage.setItem('tf_submisions', JSON.stringify(a));
+  }
 
-  function getSchedule()    { return JSON.parse(localStorage.getItem('tf_schedule_'+STUDENT_NAME)||'[]'); }
-  function saveSchedule(a)  { localStorage.setItem('tf_schedule_'+STUDENT_NAME,JSON.stringify(a)); }
-  function getOwnTasks()    { return JSON.parse(localStorage.getItem('tf_own_'+STUDENT_NAME)||'[]'); }
-  function saveOwnTasks(a)  { localStorage.setItem('tf_own_'+STUDENT_NAME,JSON.stringify(a)); }
+  function getSchedule()    { return JSON.parse(localStorage.getItem('tf_schedule_'+STUDENT_KEY)||'[]'); }
+  function saveSchedule(a)  { localStorage.setItem('tf_schedule_'+STUDENT_KEY,JSON.stringify(a)); }
+  function getOwnTasks()    { return JSON.parse(localStorage.getItem('tf_own_'+STUDENT_KEY)||'[]'); }
+  function saveOwnTasks(a)  { localStorage.setItem('tf_own_'+STUDENT_KEY,JSON.stringify(a)); }
 
   document.getElementById('sidebar-toggle')?.addEventListener('click',()=>{
     document.querySelector('.sidebar').classList.toggle('open');
@@ -338,7 +358,17 @@
 
   
   function getMyAssignments(){
-    return getAssignments().filter(a=>a.student===STUDENT_NAME);
+    const userEmail = STUDENT_EMAIL;
+    return getAssignments().filter(a => {
+      const explicitList = Array.isArray(a.assignedToEmails) ? a.assignedToEmails.map(e => String(e).toLowerCase()) : [];
+      if (explicitList.length > 0) return explicitList.includes(userEmail);
+      if (a.assignedToEmail) return String(a.assignedToEmail).toLowerCase() === userEmail;
+      return false;
+    });
+  }
+
+  function goToTaskPage(){
+    window.location.href = 'tasks.html';
   }
 
   function renderAssigned(){
@@ -346,17 +376,17 @@
     const el=document.getElementById('assigned-list');
     if(!assignments.length){ el.innerHTML=`<div class="empty-state"><div style="font-size:2rem;margin-bottom:.5rem;">📋</div>No tasks assigned to you yet.</div>`; return; }
     el.innerHTML=assignments.map(a=>{
-      const sub=submissions.find(s=>s.taskId==a.id&&s.studentName===STUDENT_NAME);
+      const sub=submissions.find(s=>String(s.taskId)===String(a.id)&&(s.studentEmail && String(s.studentEmail).toLowerCase()===STUDENT_EMAIL));
       const today=new Date().toISOString().split('T')[0];
 
-      const overdue=a.dueDate&&a.dueDate<=today&&!sub;
+      const overdue=a.dueDate&&a.dueDate<today&&!sub;
 
       const bc=sub?'badge-submitted':overdue?'badge-overdue':'badge-pending';
       const bt=sub?'Submitted':overdue?'Overdue':'Pending';
-      const due=a.dueDate?new Date(a.dueDate+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}):'No due date';
+      const due=a.dueDate?new Date(a.dueDate+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}):'—';
       const dot={high:'🔴',medium:'🟡',low:'🟢'}[a.priority]||'';
       const teacherName = a.createdBy ? (getAccounts().find(acc=>acc.email===a.createdBy)?.name||a.createdBy) : 'Teacher';
-      return `<div class="task-card">
+      return `<div class="task-card" onclick="goToTaskPage()">
         <div class="task-card-left">
           <div class="task-card-title">${a.title}</div>
           ${a.desc?`<div class="task-card-desc">${a.desc}</div>`:''}
@@ -369,19 +399,19 @@
         </div>
         <div style="flex-shrink:0;">
           <span class="badge ${bc}" style="display:block;margin-bottom:.5rem;">${bt}</span>
-          ${!sub?`<button class="btn-submit" onclick="openSubmitModal('${a.id}','${a.title.replace(/'/g,"\\'")}')">Submit ✓</button>`:''}
+          ${!sub?`<button class="btn-submit" onclick="event.stopPropagation();openSubmitModal('${a.id}','${a.title.replace(/'/g,"\\'")}','${(a.desc || '').replace(/'/g,"\\'")}')">Submit</button>`:''}
         </div>
       </div>`;
     }).join('');
   }
 
   let pendingSubmitId=null;
-  function openSubmitModal(taskId,taskTitle){ pendingSubmitId=taskId; document.getElementById('submit-task-name').textContent=`"${taskTitle}"`; document.getElementById('submit-note').value=''; document.getElementById('submit-overlay').classList.add('open'); document.getElementById('submit-modal').classList.add('open'); }
+  function openSubmitModal(taskId,taskTitle,taskDesc){ pendingSubmitId=taskId; document.getElementById('submit-task-name').textContent=`"${taskTitle}"`; document.getElementById('submit-task-desc').textContent=taskDesc&&taskDesc.trim()?taskDesc:'No description provided.'; document.getElementById('submit-note').value=''; document.getElementById('submit-overlay').classList.add('open'); document.getElementById('submit-modal').classList.add('open'); }
   function closeSubmitModal(){ document.getElementById('submit-overlay').classList.remove('open'); document.getElementById('submit-modal').classList.remove('open'); pendingSubmitId=null; }
   function confirmSubmit(){
     if(!pendingSubmitId) return;
     const subs=getSubmissions();
-    subs.push({ taskId:String(pendingSubmitId), studentName:STUDENT_NAME, note:document.getElementById('submit-note').value.trim(), submittedAt:new Date().toISOString() });
+    subs.push({ taskId:String(pendingSubmitId), studentName:STUDENT_NAME, studentEmail:STUDENT_EMAIL, note:document.getElementById('submit-note').value.trim(), submittedAt:new Date().toISOString() });
     saveSubmissions(subs);
     closeSubmitModal();
     renderAll();
@@ -401,9 +431,9 @@
     const byDate={};
     function addEv(ds,ev){ if(!ds)return; if(!byDate[ds])byDate[ds]=[]; byDate[ds].push(ev); }
 
-    const assignments=getAssignments().filter(a=>a.assignedTo===STUDENT_NAME);
+    const assignments=getMyAssignments();
     const submissions=getSubmissions();
-    assignments.forEach(a=>{ if(!a.dueDate)return; const sub=submissions.find(s=>s.taskId==a.id&&s.studentName===STUDENT_NAME); addEv(a.dueDate,{ label:a.title, cls:sub?'type-teacher-submitted':'type-teacher-'+(a.priority||'medium'), type:'📋 Teacher task', due:a.dueDate, priority:a.priority, status:sub?'Submitted ✓':'Pending', note:a.desc }); });
+    assignments.forEach(a=>{ if(!a.dueDate)return; const sub=submissions.find(s=>String(s.taskId)===String(a.id)&&(s.studentEmail && String(s.studentEmail).toLowerCase()===STUDENT_EMAIL)); addEv(a.dueDate,{ label:a.title, cls:sub?'type-teacher-submitted':'type-teacher-'+(a.priority||'medium'), type:'📋 Teacher task', due:a.dueDate, priority:a.priority, status:sub?'Submitted ✓':'Pending', note:a.desc }); });
     schedule.forEach(e=>{ const ds=e.time?e.time.split('T')[0]:null; if(!ds)return; const timeStr=e.time?new Date(e.time).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}):''; addEv(ds,{ label:(timeStr?timeStr+' ':'')+e.title, cls:'type-personal', type:'📅 Personal event', due:ds, status:'', note:e.notes }); });
     ownTasks.filter(t=>t.dueDate).forEach(t=>{ addEv(t.dueDate,{ label:t.title, cls:'type-own', type:'✅ My task', due:t.dueDate, priority:t.priority, status:t.done?'Done ✓':'Pending', note:t.desc }); });
 
@@ -449,7 +479,7 @@
   function toggleOwnTask(id){ saveOwnTasks(getOwnTasks().map(t=>t.id==id?{...t,done:!t.done}:t)); renderOwnTasks(); }
   function deleteOwnTask(id){ saveOwnTasks(getOwnTasks().filter(t=>t.id!=id)); renderOwnTasks(); renderStats(); }
 
-  function renderStats(){ const a=getMyAssignments(), s=getSubmissions().filter(s=>s.studentName===STUDENT_NAME); document.getElementById('stat-total').textContent=a.length; document.getElementById('stat-submitted').textContent=s.length; document.getElementById('stat-outstanding').textContent=Math.max(0,a.length-s.length); document.getElementById('stat-own').textContent=getOwnTasks().length; document.getElementById('sidebar-task-count').textContent=Math.max(0,a.length-s.length); }
+  function renderStats(){ const a=getMyAssignments(), s=getSubmissions().filter(s=>(s.studentEmail && String(s.studentEmail).toLowerCase()===STUDENT_EMAIL)); document.getElementById('stat-total').textContent=a.length; document.getElementById('stat-submitted').textContent=s.length; document.getElementById('stat-outstanding').textContent=Math.max(0,a.length-s.length); document.getElementById('stat-own').textContent=getOwnTasks().length; document.getElementById('sidebar-task-count').textContent=Math.max(0,a.length-s.length); }
   function showSettingsTab(t){
     document.querySelectorAll('.settings-panel').forEach(el=>el.style.display='none');
     const target=document.getElementById('sp-'+t);
@@ -498,6 +528,9 @@
 
   function showToast(msg){ const t=document.createElement('div'); t.className='toast show'; t.textContent=msg; document.querySelector('.toast-container').appendChild(t); setTimeout(()=>t.remove(),3000); }
   function renderAll(){ renderStats(); renderAssigned(); }
+  document.getElementById('btn-signout')?.addEventListener('click', signOut);
+  const roleChip = document.getElementById('btn-role-chip');
+  if (roleChip) roleChip.textContent = 'Student';
   renderAll();
   </script>
 </body>

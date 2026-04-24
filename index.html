@@ -5,9 +5,111 @@
   <title>TaskFlow - Dashboard</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/pages.css" />
+  <style>
+    .auth-wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:1rem;
+      background:var(--bg);
+    }
+    .auth-card{
+      width:100%;
+      max-width:430px;
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:1.2rem;
+    }
+    .auth-card h2{margin:0 0 .4rem 0}
+    .auth-sub{color:var(--text-muted);font-size:.9rem;margin-bottom:.9rem}
+    .auth-field{margin-bottom:.8rem}
+    .auth-field label{display:block;font-size:.8rem;color:var(--text-muted);margin-bottom:.35rem}
+    .auth-field input{
+      width:100%;
+      background:var(--bg-elev);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius:8px;
+      padding:.65rem .75rem;
+    }
+    .role-picker{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.9rem}
+    .role-card{
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:var(--bg-elev);
+      padding:.8rem;
+      cursor:pointer;
+      text-align:center;
+      color:var(--text-muted);
+    }
+    .role-card.active{
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px var(--accent) inset;
+      color:var(--text);
+    }
+    .role-icon{display:block;font-size:1.2rem;margin-bottom:.2rem}
+    .role-label{font-weight:600}
+    .role-desc{display:block;font-size:.72rem;color:var(--text-muted);margin-top:.15rem}
+    #auth-message{font-size:.85rem;min-height:1.2rem;margin-bottom:.65rem}
+    #auth-message.error{color:var(--danger)}
+    .auth-mode-foot{
+      margin-top:.7rem;
+      text-align:center;
+      font-size:.78rem;
+      color:var(--text-muted);
+    }
+    .auth-mode-link{
+      color:var(--accent);
+      cursor:pointer;
+      text-decoration:underline;
+      background:none;
+      border:none;
+      padding:0;
+      font-size:.78rem;
+    }
+  </style>
 </head>
 <body>
-<div class="shell">
+<div id="auth-root" class="auth-wrap">
+  <div class="auth-card">
+    <h2>Sign In</h2>
+    <div class="auth-sub">Use a demo account to access this dashboard.</div>
+    <div class="role-picker">
+      <button class="role-card active" id="btn-role-teacher" type="button">
+        <span class="role-icon">👩‍🏫</span>
+        <span class="role-label" id="role-teacher-label">Teacher Demo</span>
+        <span class="role-desc" id="role-teacher-desc">Quick sign in</span>
+      </button>
+      <button class="role-card" id="btn-role-student" type="button">
+        <span class="role-icon">🎓</span>
+        <span class="role-label" id="role-student-label">Student Demo</span>
+        <span class="role-desc" id="role-student-desc">Quick sign in</span>
+      </button>
+    </div>
+    <div class="auth-field" id="auth-name-wrap" style="display:none;">
+      <label for="auth-name">Full Name</label>
+      <input id="auth-name" type="text" placeholder="Your full name" />
+    </div>
+    <div class="auth-field">
+      <label for="auth-email">Email</label>
+      <input id="auth-email" type="email" placeholder="you@school.com" />
+    </div>
+    <div class="auth-field">
+      <label for="auth-password">Password</label>
+      <input id="auth-password" type="password" placeholder="password" />
+    </div>
+    <div id="auth-message"></div>
+    <button class="btn btn-primary" id="btn-auth-login" type="button" style="width:100%;">Login</button>
+    <div class="auth-mode-foot">
+      <span id="auth-mode-text">Need an account?</span>
+      <button class="auth-mode-link" id="btn-mode-toggle" type="button">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<div class="shell" id="app-shell" style="display:none;">
 
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -16,17 +118,17 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Menu</div>
-      <a href="index" class="nav-item active">
+      <a href="index.html" class="nav-item active">
         <span class="nav-icon">🏠</span> Dashboard
       </a>
-      <a href="tasks" class="nav-item">
+      <a href="tasks.html" class="nav-item">
         <span class="nav-icon">✅</span> Tasks
         <span class="nav-badge" id="sidebar-task-count">0</span>
       </a>
-      <a href="archive" class="nav-item">
+      <a href="archive.html" class="nav-item">
         <span class="nav-icon">📦</span> Archive
       </a>
-      <a href="settings" class="nav-item">
+      <a href="settings.html" class="nav-item">
         <span class="nav-icon">⚙️</span> Settings
       </a>
     </div>
@@ -45,6 +147,8 @@
     <header class="topbar">
       <h1 class="topbar-title">Dashboard</h1>
       <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btn-logout" type="button">Logout</button>
+        <button class="btn btn-ghost" id="btn-role-teacher-chip" type="button" style="display:none;">Member</button>
         <a href="tasks.html" class="btn btn-primary">+ New Task</a>
       </div>
     </header>
@@ -70,7 +174,7 @@
           <div class="stat-label">Overall Progress</div>
           <div class="stat-value" id="dash-pct">0%</div>
           <div class="progress-wrap">
-            
+            <div class="progress-fill" style="background:var(--success);"></div>
           </div>
         </div>
       </div>
@@ -127,9 +231,170 @@
 <script src="js/app.js"></script>
 <script src="js/ui.js"></script>
 <script>
-  const count = loadTasks().filter(t => !t.archived && !t.done).length;
-  const badge = document.getElementById('sidebar-task-count');
-  if (badge) badge.textContent = count;
+  function getAccounts() {
+    return JSON.parse(localStorage.getItem('tf_accounts') || 'null') || [
+      { name:'Ms. Taylor',   email:'teacher@school.com', password:'password', role:'teacher', source:'demo' },
+      { name:'Alex Johnson', email:'student@school.com', password:'password', role:'student', source:'demo' }
+    ];
+  }
+
+  function saveAccounts(a) {
+    localStorage.setItem('tf_accounts', JSON.stringify(a));
+  }
+
+  if (!localStorage.getItem('tf_accounts')) saveAccounts(getAccounts());
+
+  function cleanupStudentAccounts() {
+    const accounts = getAccounts();
+    const cleaned = accounts.filter(a => a.role !== 'student' || a.source === 'demo');
+    if (cleaned.length !== accounts.length) saveAccounts(cleaned);
+  }
+  cleanupStudentAccounts();
+
+  function updateTaskBadge() {
+    const count = loadTasks().filter(t => !t.archived && !t.done).length;
+    const badge = document.getElementById('sidebar-task-count');
+    if (badge) badge.textContent = count;
+  }
+
+  function setAuthMessage(text, isError) {
+    const el = document.getElementById('auth-message');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = isError ? 'error' : '';
+  }
+
+  function showDashboardFor(user) {
+    const authRoot = document.getElementById('auth-root');
+    const appShell = document.getElementById('app-shell');
+    if (authRoot) authRoot.style.display = 'none';
+    if (appShell) appShell.style.display = '';
+
+    const userName = document.querySelector('.user-name');
+    const userRole = document.querySelector('.user-role');
+    const avatar = document.querySelector('.avatar');
+    if (userName) userName.textContent = user.name || 'User';
+    if (userRole) userRole.textContent = user.role || 'Member';
+    if (avatar) {
+      const initials = (user.name || 'U').split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+      avatar.textContent = initials || 'U';
+    }
+    const teacherBtn = document.getElementById('btn-role-teacher-chip');
+    if (teacherBtn) {
+      teacherBtn.style.display = '';
+      teacherBtn.textContent = roleLabel(user.role);
+    }
+
+    updateTaskBadge();
+  }
+
+  let authMode = 'signin';
+  let selectedRole = 'teacher';
+
+  function setSelectedRole(role) {
+    selectedRole = role;
+    document.getElementById('btn-role-teacher')?.classList.toggle('active', role === 'teacher');
+    document.getElementById('btn-role-student')?.classList.toggle('active', role === 'student');
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    const isSignup = mode === 'signup';
+    const title = document.querySelector('#auth-root h2');
+    if (title) title.textContent = isSignup ? 'Create Account' : 'Sign In';
+    document.getElementById('auth-name-wrap').style.display = isSignup ? '' : 'none';
+    document.getElementById('btn-auth-login').textContent = isSignup ? 'Create Account' : 'Login';
+    const modeText = document.getElementById('auth-mode-text');
+    const modeLink = document.getElementById('btn-mode-toggle');
+    if (modeText) modeText.textContent = isSignup ? 'Already have an account?' : 'Need an account?';
+    if (modeLink) modeLink.textContent = isSignup ? 'Sign In' : 'Create Account';
+    const teacherLabel = document.getElementById('role-teacher-label');
+    const studentLabel = document.getElementById('role-student-label');
+    const teacherDesc = document.getElementById('role-teacher-desc');
+    const studentDesc = document.getElementById('role-student-desc');
+    if (teacherLabel) teacherLabel.textContent = isSignup ? 'Create Teacher Account' : 'Teacher Demo';
+    if (studentLabel) studentLabel.textContent = isSignup ? 'Create Student Account' : 'Student Demo';
+    if (teacherDesc) teacherDesc.textContent = isSignup ? 'Register as teacher' : 'Quick sign in';
+    if (studentDesc) studentDesc.textContent = isSignup ? 'Register as student' : 'Quick sign in';
+    setAuthMessage('');
+  }
+
+  function doLogin() {
+    const role = selectedRole;
+    const email = document.getElementById('auth-email').value.trim().toLowerCase();
+    const pass = document.getElementById('auth-password').value;
+    const acc = getAccounts().find(a => a.email.toLowerCase() === email && a.password === pass && a.role === role);
+    if (!acc) {
+      setAuthMessage('Invalid email, password, or role.', true);
+      return;
+    }
+    const sessionRole = acc.role === 'teacher' ? 'educator' : acc.role;
+    const user = { role: sessionRole, name: acc.name, email: acc.email };
+    localStorage.setItem('tf_user', JSON.stringify(user));
+    setAuthMessage('');
+    showDashboardFor(user);
+  }
+
+  function doSignup() {
+    const role = selectedRole;
+    const name = document.getElementById('auth-name').value.trim();
+    const email = document.getElementById('auth-email').value.trim().toLowerCase();
+    const pass = document.getElementById('auth-password').value;
+    if (!name) return setAuthMessage('Please enter your full name.', true);
+    if (!email) return setAuthMessage('Please enter your email.', true);
+    if (pass.length < 6) return setAuthMessage('Password must be at least 6 characters.', true);
+    const accounts = getAccounts();
+    if (accounts.some(a => a.email.toLowerCase() === email)) {
+      return setAuthMessage('An account with this email already exists.', true);
+    }
+    accounts.push({ name, email, password: pass, role, source: 'custom' });
+    saveAccounts(accounts);
+    setAuthMessage('Account created. Please sign in.', false);
+    setAuthMode('signin');
+    document.getElementById('auth-email').value = email;
+    document.getElementById('auth-password').value = '';
+  }
+
+  function fillDemo(role) {
+    if (authMode === 'signup') {
+      setSelectedRole(role);
+      setAuthMessage('');
+      return;
+    }
+    const isTeacher = role === 'teacher';
+    setSelectedRole(role);
+    document.getElementById('auth-email').value = isTeacher ? 'teacher@school.com' : 'student@school.com';
+    document.getElementById('auth-password').value = 'password';
+    setAuthMessage('');
+  }
+
+  document.getElementById('btn-role-teacher')?.addEventListener('click', () => fillDemo('teacher'));
+  document.getElementById('btn-role-student')?.addEventListener('click', () => fillDemo('student'));
+  document.getElementById('btn-mode-toggle')?.addEventListener('click', () => {
+    setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+  });
+  document.getElementById('btn-auth-login')?.addEventListener('click', () => {
+    if (authMode === 'signup') doSignup();
+    else doLogin();
+  });
+  document.getElementById('auth-password')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (authMode === 'signup') doSignup();
+      else doLogin();
+    }
+  });
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    localStorage.removeItem('tf_user');
+    window.location.reload();
+  });
+
+  const existingUser = JSON.parse(localStorage.getItem('tf_user') || 'null');
+  if (existingUser) {
+    showDashboardFor(existingUser);
+  } else {
+    setAuthMode('signin');
+    fillDemo('teacher');
+  }
 </script>
 </body>
 </html>

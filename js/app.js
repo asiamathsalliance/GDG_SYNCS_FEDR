@@ -3,7 +3,7 @@
 
 
 
-const STORAGE_KEY = 'taskflow_taks';
+const STORAGE_KEY = 'taskflow_tasks';
 
 function saveTasks(tasks) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -11,7 +11,7 @@ function saveTasks(tasks) {
 
 function loadTasks() {
   try {
-    return JSON.parse(localStorage.getItem('taskflow_tasks')) || [];
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
   } catch {
     return [];
   }
@@ -69,8 +69,39 @@ function closeModal(modalId, overlayId) {
   document.getElementById(modalId)?.classList.remove('open');
   document.getElementById(overlayId)?.classList.remove('open');
 }
+
+function getSessionUser() {
+  return JSON.parse(localStorage.getItem('tf_user') || 'null');
+}
+
+function roleLabel(role) {
+  if (role === 'educator' || role === 'teacher') return 'Teacher';
+  if (role === 'student') return 'Student';
+  return 'Member';
+}
+
+function applyUserChrome(options = {}) {
+  const user = getSessionUser();
+  if (!user) return null;
+  const nameEl = document.querySelector(options.nameSelector || '.user-name');
+  const roleEl = document.querySelector(options.roleSelector || '.user-role');
+  const avatarEl = document.querySelector(options.avatarSelector || '.avatar');
+  const chipEl = document.getElementById(options.roleChipId || 'btn-role-chip');
+
+  if (nameEl) nameEl.textContent = user.name || 'User';
+  if (roleEl) roleEl.textContent = roleLabel(user.role);
+  if (avatarEl) {
+    const initials = (user.name || 'U').split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+    avatarEl.textContent = initials || 'U';
+  }
+  if (chipEl) {
+    chipEl.style.display = '';
+    chipEl.textContent = roleLabel(user.role);
+  }
+  return user;
+}
 document.addEventListener('keydown', e => {
-  if (e.key === 'Esc') {
+  if (e.key === 'Escape') {
     document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
     document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
   }

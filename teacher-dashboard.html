@@ -67,14 +67,14 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-section-label">Teacher Menu</div>
-      <a href="teacher-dashboard" class="nav-item active">
+      <a href="teacher-dashboard.html" class="nav-item active">
         <span class="nav-icon">🏠</span> Dashboard
       </a>
       <a href="#" class="nav-item" onclick="showTab('assigned');return false;">
         <span class="nav-icon">📋</span> Assigned Tasks
         <span class="nav-badge" id="sidebar-task-count">0</span>
       </a>
-      <a href="#" class="nav-item" onclick="showTabs('submissions');return false;">
+      <a href="#" class="nav-item" onclick="showTab('submissions');return false;">
         <span class="nav-icon">📬</span> Submissions
       </a>
       <a href="settings.html" class="nav-item">
@@ -97,9 +97,9 @@
       <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
       <h1 class="topbar-title">Teacher Dashboard</h1>
       <div class="topbar-actions topbar-meta">
-        <span class="role-badge">👩‍🏫 Teacher</span>
-        <button class="btn btn-primary" type="button">+ Assign Task</button>
-        <button class="signout-btn" type="button">Sign out</button>
+        <button class="signout-btn" id="btn-signout" type="button">Logout</button>
+        <button class="btn btn-ghost btn-sm" id="btn-role-chip" type="button">Teacher</button>
+        <button class="btn btn-primary" id="btn-open-assign" type="button">+ New Task</button>
       </div>
     </header>
 
@@ -129,7 +129,7 @@
 
       <div class="tab-bar">
         <div class="tab active" id="tab-assigned"    onclick="showTab('assigned')">Assigned Tasks</div>
-        <div class="tab"        id="tab-submissions" onclick="showTabs('submissions')">Submissions</div>
+        <div class="tab"        id="tab-submissions" onclick="showTab('submissions')">Submissions</div>
         <div class="tab"        id="tab-setting"     onclick="showTab('settings')">⚙️ Settings</div>
       </div>
 
@@ -182,7 +182,7 @@
                 <div><label style="display:block;font-size:.8rem;color:#888;margin-bottom:.35rem;text-transform:uppercase;font-weight:600;">Display Name</label><input type="text" class="form-control" id="t-name" /></div>
                 <div><label style="display:block;font-size:.8rem;color:#888;margin-bottom:.35rem;text-transform:uppercase;font-weight:600;">Email</label><input type="email" class="form-control" id="t-email" /></div>
                 <div><label style="display:block;font-size:.8rem;color:#888;margin-bottom:.35rem;text-transform:uppercase;font-weight:600;">New Password</label><input type="password" class="form-control" id="t-pass" placeholder="Leave blank to keep current" /></div>
-                <div><button class="btn btn-primary" type="button">Save Changes</button></div>
+                <div><button class="btn btn-primary" id="btn-save-teacher-profile" type="button">Save Changes</button></div>
               </div>
             </div>
             <div id="tp-notifications" style="display:none;background:#13151e;border:1px solid #2a2d3a;border-radius:12px;overflow:hidden;margin-bottom:1rem;">
@@ -221,6 +221,16 @@
   </div>
   <div class="form-group">
     <label class="form-label">Assign To <span style="color:#f87171">*</span></label>
+    <div style="display:flex;gap:1rem;margin-bottom:.6rem;">
+      <label style="font-size:.82rem;color:#bbb;display:flex;align-items:center;gap:.35rem;">
+        <input type="radio" name="assign-mode" value="all" checked onchange="setAssignMode(this.value)" />
+        All students
+      </label>
+      <label style="font-size:.82rem;color:#bbb;display:flex;align-items:center;gap:.35rem;">
+        <input type="radio" name="assign-mode" value="selected" onchange="setAssignMode(this.value)" />
+        Select students
+      </label>
+    </div>
     <div class="student-checklist" id="student-checklist">
       <div class="check-all-row">
         <input type="checkbox" id="check-all" onchange="toggleAllStudents(this.checked)" />
@@ -244,7 +254,7 @@
   <div id="assign-error" style="color:#f87171;font-size:.82rem;display:none;margin-bottom:.5rem;"></div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeAssignModal()">Cancel</button>
-    <button class="btn btn-primary" type="button">Assign Task</button>
+    <button class="btn btn-primary" id="btn-save-assignment" type="button">Assign Task</button>
   </div>
 </div>
 
@@ -254,9 +264,9 @@
   
   
   const user = JSON.parse(localStorage.getItem('tf_user')||'null');
-  if (!user || user.role !== 'teacher') window.location.href = 'login.html';
+  if (!user || (user.role !== 'teacher' && user.role !== 'educator')) window.location.href = 'index.html';
 
-  function signOut(){ localStorage.removeItem('tf_user'); window.location.href='login.html'; }
+  function signOut(){ localStorage.removeItem('tf_user'); window.location.href='index.html'; }
 
 
   function getAccounts()    { return JSON.parse(localStorage.getItem('tf_accounts')||'[]'); }
@@ -341,7 +351,7 @@
       const div = document.createElement('div');
       div.className = 'student-check-item';
       const displayName = displayStudentName(s.name);
-      div.innerHTML = `<input type="checkbox" id="sc-${s.email}" value="${displayName}" />
+      div.innerHTML = `<input type="checkbox" id="sc-${s.email}" value="${s.email}" />
         <label for="sc-${s.email}">${displayName} <span style="color:#555;font-size:.75rem;">(${s.email})</span></label>`;
       list.appendChild(div);
     });
@@ -356,8 +366,15 @@
     return [...document.querySelectorAll('#student-checklist .student-check-item input:checked')].map(cb=>cb.value);
   }
 
+  function setAssignMode(mode) {
+    const list = document.getElementById('student-checklist');
+    if (list) list.style.display = mode === 'selected' ? 'flex' : 'none';
+  }
+
   function openAssignModal() {
     buildStudentChecklist();
+    setAssignMode('all');
+    document.querySelector('input[name="assign-mode"][value="all"]').checked = true;
     document.getElementById('assign-overlay').classList.add('open');
     document.getElementById('assign-modal').classList.add('open');
   }
@@ -373,21 +390,28 @@
   function saveAssignment() {
     const title    = document.getElementById('at-title').value.trim();
     const priority = document.getElementById('at-priority').value;
-    const selected = getSelectedStudents();
+    const dueDate  = document.getElementById('at-date').value;
+    const mode = document.querySelector('input[name="assign-mode"]:checked')?.value || 'all';
+    const selected = mode === 'all' ? getStudents().map(s => s.email) : getSelectedStudents();
     const errEl    = document.getElementById('assign-error');
     if (!title)           { errEl.textContent='Please enter a task title.'; errEl.style.display='block'; return; }
     if (!priority)        { errEl.textContent='Please select a priority.';  errEl.style.display='block'; return; }
-    if (!selected.length) { errEl.textContent='Please select at least one student.'; errEl.style.display='block'; return; }
+    if (!dueDate)         { errEl.textContent='Please select a due date.';  errEl.style.display='block'; return; }
+    if (!selected.length) { errEl.textContent='No student account found to assign.'; errEl.style.display='block'; return; }
     errEl.style.display='none';
     const assignments = getAssignments();
-    selected.forEach(studentName => {
+    selected.forEach(studentEmail => {
+      const studentAccount = getStudents().find(s => s.email === studentEmail);
       assignments.push({
         id: Date.now()+Math.random(),
         title,
         desc: document.getElementById('at-desc').value.trim(),
-        student: studentName,
+        student: studentAccount?.name || studentEmail,
+        assignedTo: studentAccount?.name || studentEmail,
+        assignedToEmail: studentEmail,
+        assignedToEmails: [studentEmail],
         priority,
-        dueDate: document.getElementById('at-date').value,
+        dueDate,
         createdAt: new Date().toISOString(),
         createdBy: user.email,
       });
@@ -420,7 +444,7 @@
       return;
     }
     tbody.innerHTML = assignments.map(a=>{
-      const subs = submissions.filter(s=>s.taskId===a.id);
+      const subs = submissions.filter(s=>String(s.taskId)===String(a.id));
       const isSubmitted = subs.length>0;
       const today = new Date().toISOString().split('T')[0];
 
@@ -465,7 +489,8 @@
   }
 
   function renderSubmissions() {
-    const submissions = getSubmissions();
+    const teacherTaskIds = new Set(getAssignments().filter(a => a.createdBy === user.email).map(a => String(a.id)));
+    const submissions = getSubmissions().filter(s => teacherTaskIds.has(String(s.taskId)));
     const assignments = getAssignments();
     const tbody = document.getElementById('submissions-table-body');
     if (!submissions.length) { tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No submissions yet.</td></tr>`; return; }
@@ -479,9 +504,11 @@
   }
 
   function renderStats() {
-    const a=getAssignments().filter(a=>a.createdBy===user.email), s=getSubmissions();
+    const a=getAssignments().filter(a=>a.createdBy===user.email);
+    const teacherTaskIds = new Set(a.map(t => String(t.id)));
+    const s=getSubmissions().filter(sub => teacherTaskIds.has(String(sub.taskId)));
     const total=a.length, submitted=s.length, pending=Math.max(0,total-submitted);
-    const rate=total?Math.round((pending/total)*100):0;
+    const rate=total?Math.round((submitted/total)*100):0;
     document.getElementById('stat-total').textContent=total;
     document.getElementById('stat-submitted').textContent=submitted;
     document.getElementById('stat-pending').textContent=pending;
@@ -497,6 +524,12 @@
     setTimeout(()=>t.remove(),3000);
   }
 
+  document.getElementById('btn-open-assign')?.addEventListener('click', openAssignModal);
+  document.getElementById('btn-save-assignment')?.addEventListener('click', saveAssignment);
+  document.getElementById('btn-save-teacher-profile')?.addEventListener('click', saveTeacherProfile);
+  document.getElementById('btn-signout')?.addEventListener('click', signOut);
+  document.getElementById('sidebar-name').textContent = user?.name || 'Teacher';
+  document.getElementById('sidebar-avatar').textContent = (user?.name || 'T').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   renderAll();
   </script>
 </body>
