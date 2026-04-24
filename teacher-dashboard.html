@@ -99,7 +99,7 @@
       <div class="topbar-actions topbar-meta">
         <button class="signout-btn" id="btn-signout" type="button">Logout</button>
         <button class="btn btn-ghost btn-sm" id="btn-role-chip" type="button">Teacher</button>
-        <button class="btn btn-primary" id="btn-open-assign" type="button">+ New Task</button>
+        <a class="btn btn-primary" id="btn-open-assign" href="tasks.html?new=1">+ New Task</a>
       </div>
     </header>
 
@@ -524,7 +524,6 @@
     setTimeout(()=>t.remove(),3000);
   }
 
-  document.getElementById('btn-open-assign')?.addEventListener('click', openAssignModal);
   document.getElementById('btn-save-assignment')?.addEventListener('click', saveAssignment);
   document.getElementById('btn-save-teacher-profile')?.addEventListener('click', saveTeacherProfile);
   document.getElementById('btn-signout')?.addEventListener('click', signOut);

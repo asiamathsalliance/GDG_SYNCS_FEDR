@@ -163,6 +163,14 @@
     renderBoard();
   });
 
+  const shouldOpenNewTask = new URLSearchParams(window.location.search).get('new') === '1';
+  if (shouldOpenNewTask) {
+    refreshStudentOptions();
+    openModal('task-modal', 'task-overlay');
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, '', cleanUrl);
+  }
+
   
   function renderBoard() {
     tasks = loadTasks();
